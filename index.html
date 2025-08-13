@@ -6,20 +6,21 @@
   <title>ES Language Learn</title>
 
   <link rel="manifest" href="./manifest.json">
-  <meta name="theme-color" content="#ffffff">
-  <link rel="icon" href="./icons/icon-192.png">
-
-  <script>
-    window.addEventListener("load", () => {
-      if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('./service-worker.js', { scope: './' })
-          .then(reg => console.log("✅ SW registered:", reg))
-          .catch(err => console.error("❌ SW registration failed:", err));
-      } else {
-        console.warn("❌ Service workers not supported in this browser");
-      }
+<script>
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker
+        .register('./service-worker.js', { scope: './' })
+        .then(reg => {
+          console.log('SW registered:', reg);
+        })
+        .catch(err => {
+          console.error('SW registration failed:', err);
+        });
     });
-  </script>
+  }
+</script>
+
 </head>
 
   
@@ -761,6 +762,7 @@ window.addEventListener('load', ()=>{
 </script>
 </body>
 </html>
+
 
 
 
