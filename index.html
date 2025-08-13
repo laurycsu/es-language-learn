@@ -539,6 +539,38 @@ window.addEventListener('load', () => {
   body { align-items: flex-start !important; justify-content: flex-start !important; }
 }
 </style>
+
+<script>
+/* Register the service worker */
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js').then(reg => {
+      // If there’s an updated SW waiting, activate it right away
+      if (reg.waiting) reg.waiting.postMessage({ type: 'SKIP_WAITING' });
+      reg.addEventListener('updatefound', () => {
+        const nw = reg.installing;
+        nw?.addEventListener('statechange', () => {
+          if (nw.state === 'installed') {
+            // New version ready; refresh the page to use it
+            // Optional: prompt user instead of auto-reload
+            location.reload();
+          }
+        });
+      });
+    }).catch(console.warn);
+  });
+
+  // Allow the SW to request skipWaiting
+  navigator.serviceWorker.addEventListener('message', (e) => {
+    if (e.data && e.data.type === 'SKIP_WAITING') {
+      if (navigator.serviceWorker.controller) navigator.serviceWorker.controller.postMessage({ type: 'SKIP_WAITING' });
+    }
+  });
+}
+</script>
+
+
 </body>
 </html>
+
 
