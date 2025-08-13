@@ -514,6 +514,31 @@ window.addEventListener('load', ()=>{
 
   window.addEventListener('keydown', onKey);
 });
+
 </script>
+
+<!-- HOTFIX: kill stale SW + tap-to-start + mobile scroll -->
+<script>
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.getRegistrations().then(regs => regs.forEach(r => r.unregister()));
+}
+window.addEventListener('load', () => {
+  const startAny = () => { try { if (!window.session) startSession(); } catch(e) {} };
+  const card = document.getElementById('card');
+  const prompt = document.getElementById('prompt');
+  if (prompt) prompt.addEventListener('click', startAny);
+  if (card) card.addEventListener('click', (e) => {
+    if (e.target.closest('.btn, .choice')) return; // don't hijack real buttons
+    startAny();
+  });
+});
+</script>
+
+<style>
+@media (max-width: 1000px){
+  body { align-items: flex-start !important; justify-content: flex-start !important; }
+}
+</style>
 </body>
 </html>
+
