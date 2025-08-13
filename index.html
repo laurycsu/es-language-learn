@@ -3,6 +3,17 @@
 <head>
 
 <link rel="manifest" href="./manifest.json">
+<meta name="theme-color" content="#ffffff">
+<link rel="icon" href="./icons/icon-192.png">
+<script>
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('./service-worker.js', { scope: './' })
+        .catch(console.error);
+    });
+  }
+</script>
+
 
   
 <meta charset="utf-8" />
@@ -746,4 +757,5 @@ window.addEventListener('load', ()=>{
 </script>
 </body>
 </html>
+
 
