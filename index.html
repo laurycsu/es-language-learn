@@ -1,19 +1,11 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>ES Language Learn</title>
-
-  <!-- PWA -->
-  <link rel="manifest" href="./manifest.json">
-  <meta name="theme-color" content="#0f172a">
-  <link rel="icon" href="./icons/icon-192.png">
-
-  <!-- Description -->
-  <meta name="description" content="An Anki-style Spanish ↔ English flashcard trainer with timer, repetition, stats, and multi-deck support.">
-
-  <style>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Spanish Flashcards (Anki-style)</title>
+<meta name="description" content="An Anki-style Spanish ↔ English flashcard trainer with timer, repetition, stats, and multi-deck support.">
+<style>
   :root{
     --bg:#0f172a; --panel:#111827; --ink:#e5e7eb; --muted:#94a3b8; --accent:#22c55e; --danger:#ef4444; --brand:#38bdf8;
     --btn:#1f2937; --btnHover:#374151; --chip:#0b1223; --good:#16a34a; --bad:#dc2626;
@@ -30,10 +22,14 @@
   .app{
     width:100%; max-width:980px; background:rgba(17,24,39,.7); backdrop-filter: blur(8px);
     border:1px solid #1f2937; border-radius:18px; box-shadow:0 10px 30px rgba(0,0,0,.35);
-    overflow:hidden;
+    /* allow scrolling on mobile */
+    overflow:visible;
   }
   header{
-    display:flex; gap:12px; align-items:center; justify-content:space-between; padding:16px 18px; border-bottom:1px solid #1f2937; background:rgba(2,6,23,.65);
+    position:sticky; top:0; z-index:10;
+    display:flex; gap:12px; align-items:center; justify-content:space-between;
+    padding:16px 18px; border-bottom:1px solid #1f2937; background:rgba(2,6,23,.85);
+    backdrop-filter: blur(6px);
   }
   header .title{font-weight:700; letter-spacing:.2px}
   header .title small{display:block; color:var(--muted); font-weight:500}
@@ -53,7 +49,16 @@
   }
   .toggle button.active{background:#0b1223; color:#e5e7eb; box-shadow: inset 0 0 0 1px #243247}
   main{padding:22px; display:grid; grid-template-columns: 1fr 340px; gap:18px}
-  @media (max-width:900px){ main{grid-template-columns:1fr} }
+  @media (max-width:900px){
+    /* let page scroll naturally and keep header visible */
+    body{ align-items:flex-start; justify-content:flex-start; }
+    main{ grid-template-columns:1fr; padding:16px; }
+    header{ flex-direction:column; align-items:stretch; gap:8px; }
+    .controls{ width:100%; }
+    .controls .select{ width:100%; }
+    .toggle{ width:100%; justify-content:space-between; }
+    .controls .btn{ flex:1; }
+  }
   .card{
     display:flex; flex-direction:column; gap:14px; background:radial-gradient(1200px 400px at 50% -10%, rgba(56,189,248,.12), transparent 60%), #0b1223;
     border:1px solid #1e293b; border-radius:16px; padding:18px; min-height:300px; justify-content:center; align-items:center; text-align:center;
@@ -92,7 +97,7 @@
   .hidden{display:none}
   .footer{padding:12px 16px; color:#9aa7b8; font-size:12px; border-top:1px solid #1f2937; display:flex; justify-content:space-between; gap:10px}
   .linklike{color:#93c5fd; text-decoration:underline; cursor:pointer}
-  textarea{width:100%; min-height:120px; background:#0b1223; border:1px solid #223049; border-radius:10px; color:#var(--ink); padding:10px}
+  textarea{width:100%; min-height:120px; background:#0b1223; border:1px solid #223049; border-radius:10px; color:var(--ink); padding:10px}
   .decklist{display:flex; flex-direction:column; gap:6px; margin-top:8px}
   .deckitem{display:flex; align-items:center; gap:8px; background:#0a1429; border:1px solid #223049; border-radius:10px; padding:8px 10px}
   .deckitem .name{font-weight:700}
@@ -102,18 +107,7 @@
   .reviewCard .q{font-weight:800}
   .reviewCard .a{color:#93c5fd}
   .streak{font-weight:800}
-  </style>
-
-  <script>
-    // Service worker registration (PWA)
-    if ('serviceWorker' in navigator) {
-      window.addEventListener('load', () => {
-        navigator.serviceWorker
-          .register('./service-worker.js', { scope: './' })
-          .catch(console.error);
-      });
-    }
-  </script>
+</style>
 </head>
 <body>
 <div class="app" id="app">
@@ -238,7 +232,7 @@
         </label>
         <label style="display:flex;align-items:center;gap:8px;margin:6px 0">
           <input id="soundFx" type="checkbox" checked>
-          <span class="muted">Sound effects</span>
+          <span class="muted">Sound effects + haptics</span>
         </label>
         <div class="chips" style="margin-top:6px">
           <button class="btn" id="resetProgressBtn" title="Clear mastery tracking">Reset progress</button>
@@ -254,17 +248,18 @@
   </div>
 </div>
 
-<!-- Audio elements kept; sources removed to avoid decode errors. -->
-<audio id="fxRight" preload="none"></audio>
-<audio id="fxWrong" preload="none"></audio>
+<audio id="fxRight" preload="auto">
+  <source src="data:audio/wav;base64,UklGRpQAAABXQVZFZm10IBAAAAABAAEAESsAACJWAAACABYAAAABAACAgICA" type="audio/wav">
+</audio>
+<audio id="fxWrong" preload="auto">
+  <source src="data:audio/wav;base64,UklGRpQAAABXQVZFZm10IBAAAAABAAEAESsAACJWAAACABYAAAABAACAgICA" type="audio/wav">
+</audio>
 
 <script>
 /* ===========================================================
    Spanish Flashcards – Anki-style trainer (randomized, no deck numbering)
-   - Random first-pass order each session (still repeats misses fast)
-   - Deck names shown exactly as given (no numeric prefixes)
-   - Auto-sanitizes previously saved names like "1. Something" → "Something"
-   =========================================================== */
+   Mobile fix: header sticky + scrolling enabled on small screens
+=========================================================== */
 
 /* ---------- Starter deck (~120 high-frequency words) ---------- */
 const STARTER_DECK = [
@@ -273,7 +268,7 @@ const STARTER_DECK = [
   ["¿qué?","what"],["¿quién?","who"],["¿dónde?","where"],["¿cuándo?","when"],["¿por qué?","why"],["¿cómo?","how"],
   ["yo","I"],["tú","you"],["usted","you (formal)"],["él","he"],["ella","she"],["nosotros","we"],["vosotros","you (pl)"],["ellos","they"],
   ["ser","to be"],["estar","to be (state)"],["tener","to have"],["hacer","to do"],["poder","can"],["decir","to say"],["ir","to go"],
-  ["ver","to see"],["dar","to "],["saber","to know"],["querer","to want"],["llegar","to arrive"],["pasar","to spend (time)"],
+  ["ver","to see"],["dar","to give"],["saber","to know"],["querer","to want"],["llegar","to arrive"],["pasar","to spend (time)"],
   ["deber","should"],["poner","to put"],["parecer","to seem"],["quedar","to stay"],["creer","to believe"],["hablar","to speak"],
   ["llevar","to carry"],["dejar","to leave"],["seguir","to follow"],["encontrar","to find"],["llamar","to call"],["venir","to come"],
   ["pensar","to think"],["salir","to leave"],["volver","to return"],["tomar","to take"],["conocer","to know (meet)"],
@@ -299,7 +294,7 @@ function normalize(deckArr){
   return deckArr.map(([es,en],i)=>({ id:i+1, es:es.trim().toLowerCase(), en:en.trim().toLowerCase(), box:1, seen:0, correct:0, wrong:0 }));
 }
 
-/* ---------- Storage Keys (migrates from single-deck) ---------- */
+/* ---------- Storage Keys ---------- */
 const LS_KEYS = {
   DECK: "spanish_deck_csv_v1",      // legacy
   DECKS: "spanish_decks_v2",        // array of {name, csv}
@@ -337,7 +332,7 @@ function parseCSV(text){
     return [es, en];
   }).filter(Boolean);
 }
-const vibrate = () => {}; // haptics removed
+const vibrate = ms => { if($('#soundFx').checked && navigator.vibrate) try{ navigator.vibrate(ms); }catch{} };
 const sanitizeName = name => name.replace(/^\s*\d+\.\s*/,'').trim();
 
 /* ---------- Load/Save (with migration, and name sanitization) ---------- */
@@ -353,9 +348,7 @@ function loadDecks(){
   }
   const base = [{ name:"120 Most Common Words", csv: toCSV(normalize(STARTER_DECK)) }];
   const legacy = localStorage.getItem(LS_KEYS.DECK);
-  if(legacy){
-    base.push({ name:"Imported Deck", csv: legacy });
-  }
+  if(legacy){ base.push({ name:"Imported Deck", csv: legacy }); }
   localStorage.setItem(LS_KEYS.DECKS, JSON.stringify(base));
   return base;
 }
@@ -480,7 +473,8 @@ function handleChoice(btn, opt, a, dir, cur, list){
     session.correct++; streak++; streakMax = Math.max(streakMax, streak);
     updateMastery(cur, true);
     session.answeredThisRound.push(cur);
-    if($('#soundFx').checked){ /* sound disabled placeholder */ }
+    if($('#soundFx').checked) $('#fxRight').play().catch(()=>{});
+    vibrate(20);
   }else{
     btn.classList.add('wrong');
     [...list.children].forEach(c=>{
@@ -496,7 +490,8 @@ function handleChoice(btn, opt, a, dir, cur, list){
       a: dir==="es-en"? cur.en : cur.es,
       dir
     });
-    if($('#soundFx').checked){ /* sound disabled placeholder */ }
+    if($('#soundFx').checked) $('#fxWrong').play().catch(()=>{});
+    vibrate([15,30,15]);
   }
   renderStats();
   if($('#autoAdvance').checked){
@@ -698,6 +693,8 @@ window.addEventListener('load', ()=>{
     if(!session.answered){
       session.answered=true; session.wrong++; streak=0; updateMastery(cur,false); session.backlog.splice(2,0,cur);
       wrongPairs.push({ q: dir==="es-en"? cur.es : cur.en, a: answer, dir });
+      if($('#soundFx').checked) $('#fxWrong').play().catch(()=>{});
+      vibrate([15,30,15]);
       renderStats();
     }
   };
@@ -735,6 +732,10 @@ window.addEventListener('load', ()=>{
 
   window.addEventListener('keydown', onKey);
 });
+
+/* ---------- Optional: PWA ----------
+   Add a manifest.json and sw.js, then register the service worker for installability.
+---------------------------------------------------- */
 </script>
 </body>
 </html>
