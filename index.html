@@ -5,27 +5,15 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>ES Language Learn</title>
 
+  <!-- PWA -->
   <link rel="manifest" href="./manifest.json">
-<script>
-  if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => {
-      navigator.serviceWorker
-        .register('./service-worker.js', { scope: './' })
-        .then(reg => {
-          console.log('SW registered:', reg);
-        })
-        .catch(err => {
-          console.error('SW registration failed:', err);
-        });
-    });
-  }
-</script>
+  <meta name="theme-color" content="#0f172a">
+  <link rel="icon" href="./icons/icon-192.png">
 
-</head>
+  <!-- Description -->
+  <meta name="description" content="An Anki-style Spanish ↔ English flashcard trainer with timer, repetition, stats, and multi-deck support.">
 
-  
-<meta name="description" content="An Anki-style Spanish ↔ English flashcard trainer with timer, repetition, stats, and multi-deck support.">
-<style>
+  <style>
   :root{
     --bg:#0f172a; --panel:#111827; --ink:#e5e7eb; --muted:#94a3b8; --accent:#22c55e; --danger:#ef4444; --brand:#38bdf8;
     --btn:#1f2937; --btnHover:#374151; --chip:#0b1223; --good:#16a34a; --bad:#dc2626;
@@ -114,7 +102,18 @@
   .reviewCard .q{font-weight:800}
   .reviewCard .a{color:#93c5fd}
   .streak{font-weight:800}
-</style>
+  </style>
+
+  <script>
+    // Service worker registration (PWA)
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker
+          .register('./service-worker.js', { scope: './' })
+          .catch(console.error);
+      });
+    }
+  </script>
 </head>
 <body>
 <div class="app" id="app">
@@ -239,7 +238,7 @@
         </label>
         <label style="display:flex;align-items:center;gap:8px;margin:6px 0">
           <input id="soundFx" type="checkbox" checked>
-          <span class="muted">Sound effects + haptics</span>
+          <span class="muted">Sound effects</span>
         </label>
         <div class="chips" style="margin-top:6px">
           <button class="btn" id="resetProgressBtn" title="Clear mastery tracking">Reset progress</button>
@@ -255,12 +254,9 @@
   </div>
 </div>
 
-<audio id="fxRight" preload="auto">
-  <source src="data:audio/wav;base64,UklGRpQAAABXQVZFZm10IBAAAAABAAEAESsAACJWAAACABYAAAABAACAgICA" type="audio/wav">
-</audio>
-<audio id="fxWrong" preload="auto">
-  <source src="data:audio/wav;base64,UklGRpQAAABXQVZFZm10IBAAAAABAAEAESsAACJWAAACABYAAAABAACAgICA" type="audio/wav">
-</audio>
+<!-- Audio elements kept; sources removed to avoid decode errors. -->
+<audio id="fxRight" preload="none"></audio>
+<audio id="fxWrong" preload="none"></audio>
 
 <script>
 /* ===========================================================
@@ -277,7 +273,7 @@ const STARTER_DECK = [
   ["¿qué?","what"],["¿quién?","who"],["¿dónde?","where"],["¿cuándo?","when"],["¿por qué?","why"],["¿cómo?","how"],
   ["yo","I"],["tú","you"],["usted","you (formal)"],["él","he"],["ella","she"],["nosotros","we"],["vosotros","you (pl)"],["ellos","they"],
   ["ser","to be"],["estar","to be (state)"],["tener","to have"],["hacer","to do"],["poder","can"],["decir","to say"],["ir","to go"],
-  ["ver","to see"],["dar","to give"],["saber","to know"],["querer","to want"],["llegar","to arrive"],["pasar","to spend (time)"],
+  ["ver","to see"],["dar","to "],["saber","to know"],["querer","to want"],["llegar","to arrive"],["pasar","to spend (time)"],
   ["deber","should"],["poner","to put"],["parecer","to seem"],["quedar","to stay"],["creer","to believe"],["hablar","to speak"],
   ["llevar","to carry"],["dejar","to leave"],["seguir","to follow"],["encontrar","to find"],["llamar","to call"],["venir","to come"],
   ["pensar","to think"],["salir","to leave"],["volver","to return"],["tomar","to take"],["conocer","to know (meet)"],
@@ -341,7 +337,7 @@ function parseCSV(text){
     return [es, en];
   }).filter(Boolean);
 }
-const vibrate = ms => { if($('#soundFx').checked && navigator.vibrate) try{ navigator.vibrate(ms); }catch{} };
+const vibrate = () => {}; // haptics removed
 const sanitizeName = name => name.replace(/^\s*\d+\.\s*/,'').trim();
 
 /* ---------- Load/Save (with migration, and name sanitization) ---------- */
@@ -350,15 +346,12 @@ function loadDecks(){
   if(v2){
     try{
       const arr = JSON.parse(v2);
-      // sanitize names (remove any "1. " style prefixes from past versions)
       arr.forEach(d=> d.name = sanitizeName(d.name||"Deck"));
       localStorage.setItem(LS_KEYS.DECKS, JSON.stringify(arr));
       return arr;
     }catch{}
   }
-  // Initialize with the single starter deck (no numbering)
   const base = [{ name:"120 Most Common Words", csv: toCSV(normalize(STARTER_DECK)) }];
-  // If legacy single-deck existed, add it as a separate deck without numbering
   const legacy = localStorage.getItem(LS_KEYS.DECK);
   if(legacy){
     base.push({ name:"Imported Deck", csv: legacy });
@@ -377,7 +370,6 @@ function saveMastery(m){ localStorage.setItem(LS_KEYS.MASTERY, JSON.stringify(m)
 /* ---------- Session Engine ---------- */
 function newSession(durationMin, mode){
   const mastery = loadMastery();
-  // RANDOMIZE the first pass order each session, while still carrying box values
   const work = shuffle(
     deck.map(d=>{
       const key = d.es+"|"+d.en;
@@ -488,8 +480,7 @@ function handleChoice(btn, opt, a, dir, cur, list){
     session.correct++; streak++; streakMax = Math.max(streakMax, streak);
     updateMastery(cur, true);
     session.answeredThisRound.push(cur);
-    if($('#soundFx').checked) $('#fxRight').play().catch(()=>{});
-    vibrate(20);
+    if($('#soundFx').checked){ /* sound disabled placeholder */ }
   }else{
     btn.classList.add('wrong');
     [...list.children].forEach(c=>{
@@ -505,8 +496,7 @@ function handleChoice(btn, opt, a, dir, cur, list){
       a: dir==="es-en"? cur.en : cur.es,
       dir
     });
-    if($('#soundFx').checked) $('#fxWrong').play().catch(()=>{});
-    vibrate([15,30,15]);
+    if($('#soundFx').checked){ /* sound disabled placeholder */ }
   }
   renderStats();
   if($('#autoAdvance').checked){
@@ -587,7 +577,6 @@ function endSession(){
 function setActiveDeck(idx){
   activeDeckIndex = idx;
   saveActiveIndex();
-  // Ensure deck name is sanitized when switching
   decks[idx].name = sanitizeName(decks[idx].name || "Deck");
   deck = normalize(parseCSV(decks[activeDeckIndex].csv));
   $('#deckSize').textContent = deck.length;
@@ -652,14 +641,12 @@ function onKey(e){
 
 /* ---------- Wire up ---------- */
 window.addEventListener('load', ()=>{
-  // load decks + active (and sanitize names)
   decks = loadDecks().map(d=> ({...d, name: sanitizeName(d.name || "Deck")}));
   activeDeckIndex = loadActiveIndex();
   if(activeDeckIndex<0 || activeDeckIndex>=decks.length) activeDeckIndex = 0;
   setActiveDeck(activeDeckIndex);
   renderDeckList();
 
-  // settings
   const s = loadSettings();
   if(s.duration) $('#duration').value = String(s.duration);
   (["avoidNearSyn","autoAdvance","soundFx"]).forEach(k=>{
@@ -669,7 +656,6 @@ window.addEventListener('load', ()=>{
     document.querySelectorAll('.toggle button').forEach(b=>b.classList.toggle('active', b.dataset.dir===s.mode));
   }
 
-  // UI events
   $('#startBtn').onclick = startSession;
   $('#pauseBtn').onclick = pauseResume;
   $('#stopBtn').onclick = endSession;
@@ -712,8 +698,6 @@ window.addEventListener('load', ()=>{
     if(!session.answered){
       session.answered=true; session.wrong++; streak=0; updateMastery(cur,false); session.backlog.splice(2,0,cur);
       wrongPairs.push({ q: dir==="es-en"? cur.es : cur.en, a: answer, dir });
-      if($('#soundFx').checked) $('#fxWrong').play().catch(()=>{});
-      vibrate([15,30,15]);
       renderStats();
     }
   };
@@ -726,7 +710,6 @@ window.addEventListener('load', ()=>{
     };
   });
 
-  // File import as NEW DECK (no automatic numbering in name)
   $('#fileInput').addEventListener('change', e=>{
     const file = e.target.files[0];
     if(!file) return;
@@ -746,24 +729,12 @@ window.addEventListener('load', ()=>{
     $('#csvArea').value = ""; $('#csvName').value = "";
   };
 
-  // Initial state
   $('#prompt').textContent = "Press “Start session”";
   $('#timeLeft').textContent = "00:00";
   renderStats();
 
-  // keyboard
   window.addEventListener('keydown', onKey);
 });
-
-/* ---------- Optional: PWA ----------
-   Add a manifest.json and sw.js, then register the service worker for installability.
-   (Same instructions as earlier builds.)
----------------------------------------------------- */
 </script>
 </body>
 </html>
-
-
-
-
-
