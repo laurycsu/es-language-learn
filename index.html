@@ -5,6 +5,8 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
 <title>Spanish Flashcards (Anki-style)</title>
 <meta name="description" content="An Anki-style Spanish ↔ English flashcard trainer with timer, repetition, stats, and multi-deck support.">
+<meta name="theme-color" content="#0f172a">
+<link rel="manifest" href="manifest.json">
 <style>
   :root{
     --bg:#0f172a; --panel:#111827; --ink:#e5e7eb; --muted:#94a3b8; --accent:#22c55e; --danger:#ef4444; --brand:#38bdf8;
@@ -517,23 +519,6 @@ window.addEventListener('load', ()=>{
 
 </script>
 
-<!-- HOTFIX: kill stale SW + tap-to-start + mobile scroll -->
-<script>
-if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.getRegistrations().then(regs => regs.forEach(r => r.unregister()));
-}
-window.addEventListener('load', () => {
-  const startAny = () => { try { if (!window.session) startSession(); } catch(e) {} };
-  const card = document.getElementById('card');
-  const prompt = document.getElementById('prompt');
-  if (prompt) prompt.addEventListener('click', startAny);
-  if (card) card.addEventListener('click', (e) => {
-    if (e.target.closest('.btn, .choice')) return; // don't hijack real buttons
-    startAny();
-  });
-});
-</script>
-
 <style>
 @media (max-width: 1000px){
   body { align-items: flex-start !important; justify-content: flex-start !important; }
@@ -572,5 +557,3 @@ if ('serviceWorker' in navigator) {
 
 </body>
 </html>
-
-
