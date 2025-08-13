@@ -1,5 +1,4 @@
-// Cache-first PWA for ES Language Learn
-const CACHE = "es-learn-v1"; // bump this when you update assets
+const CACHE = "es-learn-v1";
 
 const ASSETS = [
   "./",
@@ -7,14 +6,13 @@ const ASSETS = [
   "./manifest.json",
   "./icons/icon-192.png",
   "./icons/icon-512.png",
-  // add your CSS/JS/audio/images here, e.g.:
-  // "./assets/app.css",
-  // "./assets/app.js",
-  // "./sounds/correct.mp3"
+  "./sounds/correct.wav" // optional, only if used
 ];
 
 self.addEventListener("install", (event) => {
-  event.waitUntil(caches.open(CACHE).then((cache) => cache.addAll(ASSETS)));
+  event.waitUntil(
+    caches.open(CACHE).then((cache) => cache.addAll(ASSETS))
+  );
   self.skipWaiting();
 });
 
@@ -28,8 +26,7 @@ self.addEventListener("activate", (event) => {
 });
 
 self.addEventListener("fetch", (event) => {
-  const req = event.request;
   event.respondWith(
-    caches.match(req).then((cached) => cached || fetch(req))
+    caches.match(event.request).then((cached) => cached || fetch(event.request))
   );
 });
