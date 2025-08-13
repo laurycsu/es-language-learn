@@ -1,24 +1,25 @@
 <!doctype html>
 <html lang="en">
 <head>
-
-<link rel="manifest" href="./manifest.json">
-<meta name="theme-color" content="#ffffff">
-<link rel="icon" href="./icons/icon-192.png">
-<script>
-  if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => {
-      navigator.serviceWorker.register('./service-worker.js', { scope: './' })
-        .catch(console.error);
-    });
-  }
-</script>
-
-
-  
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
 <title>Spanish Flashcards (Anki-style)</title>
+
+ <link rel="manifest" href="./manifest.json" />
+  <meta name="theme-color" content="#ffffff" />
+  <link rel="icon" href="./icons/icon-192.png" />
+
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./service-worker.js', { scope: './' })
+          .then(reg => console.log("Service Worker registered:", reg))
+          .catch(err => console.error("Service Worker registration failed:", err));
+      });
+    }
+  </script>
+</head>
+  
 <meta name="description" content="An Anki-style Spanish ↔ English flashcard trainer with timer, repetition, stats, and multi-deck support.">
 <style>
   :root{
@@ -757,5 +758,6 @@ window.addEventListener('load', ()=>{
 </script>
 </body>
 </html>
+
 
 
